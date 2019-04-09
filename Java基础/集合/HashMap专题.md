@@ -1,6 +1,5 @@
->
->
->大部分来源是其他博客，小部分是自己的理解，站在巨人的肩上，会看得更远。因为java对HashMap做了较大的优化，故本笔记分为jdk1.7和1.8两个版本叙述。
+> 大部分来源是其他博客，小部分是自己的理解，站在巨人的肩上，会看得更远。因为java对HashMap做了较大的优化，故本笔记分为jdk1.7和1.8两个版本叙述。
+
 ## 一、HashMap源码分析(JDK1.7)
 ### HashMap结构
 
@@ -312,15 +311,15 @@ JDK1.7是重新计算的hash值，然后再计算存储位置，而JDK1.8是利�
 
 由于是双倍扩容，迁移过程中，会将原来 table[i] 中的链表的所有节点，分拆到新的数组的 newTable[i] 和 newTable[i + oldLength] 位置上。
 
-![](C:/Users/CN17477/Desktop/JavaDeveloperNote/Java%E5%9F%BA%E7%A1%80/%E9%9B%86%E5%90%88/imgs/2.png)
+![](./imgs/2.png)
 
 元素在重新计算hash之后，因为n变为2倍，那么n-1的二进制在高位多1bit(红色)，因此新的index就会发生这样的变化： 
 
-![](C:/Users/CN17477/Desktop/JavaDeveloperNote/Java%E5%9F%BA%E7%A1%80/%E9%9B%86%E5%90%88/imgs/3.png)
+![](./imgs/3.png)
 
 因此，我们在扩充HashMap的时候，不需要像JDK1.7的实现那样重新计算hash，只需要看看原来的hash值新增的那个bit是1还是0就好了，是0的话索引没变，是1的话索引变成“原索引+oldCap”，可以看看下图为16扩充为32的resize示意图:
 
-![](C:/Users/CN17477/Desktop/JavaDeveloperNote/Java%E5%9F%BA%E7%A1%80/%E9%9B%86%E5%90%88/imgs/4.png)
+![](./imgs/4.png)
 
 这个设计确实非常的巧妙，既省去了重新计算hash值的时间，而且同时，由于新增的1bit是0还是1可以认为是随机的，因此resize的过程，均匀的把之前的冲突的节点分散到新的bucket了。这一块就是JDK1.8新增的优化点。
 
