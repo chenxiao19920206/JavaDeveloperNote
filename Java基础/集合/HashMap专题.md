@@ -326,7 +326,7 @@ JDK1.7是重新计算的hash值，然后再计算存储位置，而JDK1.8是利�
 **除此之外，JDK1.7中rehash的时候，旧链表迁移新链表的时候，如果在新表的数组索引位置相同，则链表元素会倒置，但是从上图可以看出，JDK1.8不会倒置。**
 
 ## 四、并发下的HashMap
-* JDK1.7
+### JDK1.7
 
 HashMap在多线程的情况下，会引发安全问题。
 
@@ -358,7 +358,7 @@ HashMap在多线程的情况下，会引发安全问题。
 
  大佬认为，这个不算是bug，是正常情况，在并发环境下，推荐使用ConcurrentHashMap。
 
- * JDK1.8   
+###JDK1.8   
 
 本来以为是正常设置，然后在jdk1.8不会被修复，没想到只是大佬嘴硬不承认时bug罢了。事实上，在jdk1.8版本，hashmap多线程put不会造成死循环。
 
@@ -368,17 +368,17 @@ HashMap在多线程的情况下，会引发安全问题。
 
 ## 五、HashMap的常见面试题
 
-### 1.为什么 HashMap 中 String、Integer 这样的包装类适合作为 key 键
+**1.为什么 HashMap 中 String、Integer 这样的包装类适合作为 key 键**
 
 * String、Integer是final类，具有不可变性，保证了Key的不可更改，不会出现put&get时哈希值不同的情况。
 * 内部已经重写了equals和hashcode方法，严格遵守约定&Hash碰撞少。
 
-### 2.为什么HashMap的数组长度一定是2的次幂？
+**2.为什么HashMap的数组长度一定是2的次幂？**
 
 * 扩容迁移数组时，不用重新计算hash值。（JDK1.8优化）
 * 可以使用&代替取余计算，提升效率
 
-### 3.为什么HashMap线程不安全？
+**3.为什么HashMap线程不安全？**
 
 * JDK1.7、JDK1.8都没有使用同步
 
@@ -388,93 +388,55 @@ HashMap在多线程的情况下，会引发安全问题。
 
   每修改一次HashMap的内容，modCount变量增一，判断modCount的值与预期值是否相同，如不相同，则表示有其他线程修改HashMap，那么就快速响应失败。
 
-### 4.HashMap的缺点
+**4.HashMap的缺点**
 
 - 不支持范围查找
 - 无序的，即遍历的时候，先put的节点，不一定先get。（这应该算特点，而不是缺点）
 - 空间浪费，HashMaP中的数组一定是2的幂。
 - 线程不安全
 
-### 四、ConcurrentHashMap
+## 六、ConcurrentHashMap
 
-烧脑指数爆表，日后补充。
-#### jdk1.7
+### JDK1.7
 
-整个 ConcurrentHashMap 由一个个 Segment 组成，Segment 代表”部分“或”一段“的意思，所以很多地方都会将其描述为分段锁。注意，行文中，我很多地方用了“槽”来代表一个 segment。
+直接看文章吧，写的挺详细的，然后回答下面的面试题即可。
 
-简单理解就是，ConcurrentHashMap 是一个 Segment 数组，Segment 通过继承 ReentrantLock 来进行加锁，所以每次需要加锁的操作锁住的是一个 segment，这样只要保证每个 Segment 是线程安全的，也就实现了全局的线程安全。
+* <http://www.importnew.com/28263.html>  | 这篇比较完整
+* <http://www.importnew.com/21781.html>  | 这篇只看get方法，阐述了为什么get可以不用锁就可以实现线程安全的原因
+* <https://blog.csdn.net/dingji_ping/article/details/51005799>  | 这篇看remove方法
 
-![image](https://raw.githubusercontent.com/herofishs/markdownPhoto/master/concurrentHashMap%E7%BB%93%E6%9E%84.png)
+好了，看完上面三篇文章，请回答我以下几个问题：
 
-concurrencyLevel：并行级别、并发数、Segment 数，怎么翻译不重要，理解它。默认是 16，也就是说 ConcurrentHashMap 有 16 个 Segments，所以理论上，这个时候，最多可以同时支持 16 个线程并发写，只要它们的操作分别分布在不同的 Segment 上。这个值可以在初始化的时候设置为其他值，但是一旦初始化以后，它是不可以扩容的。
+* ConcurrentHashMap如何保证线程安全？
 
-再具体到每个 Segment 内部，其实每个 Segment 很像之前介绍的 HashMap，不过它要保证线程安全，所以处理起来要麻烦些。
+  HashTable在竞争激烈的并发环境下表现出效率低下的原因是所有访问HashTable的线程都必须竞争同一把锁，那假如容器中存在多把锁，每一把锁用于锁容器其中一部分数据，那么当多线程访问容器里不同数据段的数据时，线程间就不会存在锁竞争，从而有效的提高并发访问效率。这就是ConcurrentHashMap所使用的分段锁技术，首先将数据分成一段一段的存储，然后给每一段数据配一把锁，当一个线程占用锁访问其中一个锁数据的时候，其他段的数据也能被其他线程访问。
 
-```java
-public ConcurrentHashMap(int initialCapacity,
-                         float loadFactor, int concurrencyLevel) {
-    if (!(loadFactor > 0) || initialCapacity < 0 || concurrencyLevel <= 0)
-        throw new IllegalArgumentException();
-    if (concurrencyLevel > MAX_SEGMENTS)
-        concurrencyLevel = MAX_SEGMENTS;
-    // Find power-of-two sizes best matching arguments
-    int sshift = 0;
-    int ssize = 1;
-    // 计算并行级别 ssize，因为要保持并行级别是 2 的 n 次方
-    while (ssize < concurrencyLevel) {
-        ++sshift;
-        ssize <<= 1;
-    }
-    // 我们这里先不要那么烧脑，用默认值，concurrencyLevel 为 16，sshift 为 4
-    // 那么计算出 segmentShift 为 28，segmentMask 为 15，后面会用到这两个值
-    this.segmentShift = 32 - sshift;
-    this.segmentMask = ssize - 1;
- 
-    if (initialCapacity > MAXIMUM_CAPACITY)
-        initialCapacity = MAXIMUM_CAPACITY;
- 
-    // initialCapacity 是设置整个 map 初始的大小，
-    // 这里根据 initialCapacity 计算 Segment 数组中每个位置可以分到的大小
-    // 如 initialCapacity 为 64，那么每个 Segment 或称之为"槽"可以分到 4 个
-    int c = initialCapacity / ssize;
-    if (c * ssize < initialCapacity)
-        ++c;
-    // 默认 MIN_SEGMENT_TABLE_CAPACITY 是 2，这个值也是有讲究的，因为这样的话，对于具体的槽上，
-    // 插入一个元素不至于扩容，插入第二个的时候才会扩容
-    int cap = MIN_SEGMENT_TABLE_CAPACITY; 
-    while (cap < c)
-        cap <<= 1;
- 
-    // 创建 Segment 数组，
-    // 并创建数组的第一个元素 segment[0]
-    Segment<K,V> s0 =
-        new Segment<K,V>(loadFactor, (int)(cap * loadFactor),
-                         (HashEntry<K,V>[])new HashEntry[cap]);
-    Segment<K,V>[] ss = (Segment<K,V>[])new Segment[ssize];
-    // 往数组写入 segment[0]
-    UNSAFE.putOrderedObject(ss, SBASE, s0); // ordered write of segments[0]
-    this.segments = ss;
-}
-```
-初始化完成，我们得到了一个 Segment 数组。
+* get操作需不需要加锁?如何保证get的线程安全？
 
-我们就当是用 new ConcurrentHashMap() 无参构造函数进行初始化的，那么初始化完成后：
+  get操作的高效之处在于整个get过程不需要加锁，除非读到的值是空的才会加锁重读。
 
-* Segment 数组长度为 16，不可以扩容
-* Segment[i] 的默认大小为 2，负载因子是 0.75，得出初始阈值为 1.5，也就是以后插入第一个元素不会触发扩容，插入第二个会进行第一次扩容
-* 这里初始化了 segment[0]，其他位置还是 null，至于为什么要初始化 segment[0]，后面的代码会介绍
-* 当前 segmentShift 的值为 32 – 4 = 28，segmentMask 为 16 – 1 = 15，姑且把它们简单翻译为移位数和掩码，这两个值马上就会用到
-####  jdk1.8
-* 
+  get方法里将要使用的共享变量都定义成了volatile，如用于统计当前Segment大小的count字段和用于存储值的HashEntry的value。定义成volatile的变量能够在线程之间保持可见性，能够被多线程同时读，并且保证不会读到过期的值，只要不需要写共享变量count和value，都不需要加锁。
 
+  另外，因为HashEntry中的key和next都是final类型，所以put操作是采用头插法，虽然改变了链表的结构，但并不影响get操作。注意这里在new HashEntry时，有可能出现和单例模式中的DCL一样的问题，即没有锁同步的话，new 一个对象对于多线程看到这个对象的状态是没有保障的，这里同样有可能一个线程new这个对象的时候还没有执行完构造函数就被另一个线程得到这个对象引用。所以才需要判断一下：`if (v != null)` 如果确实是一个不完整的对象，则使用锁的方式再次get一次。对于null值，concurrentHashMap是不允许put进的。
 
+  还有，remove操作也会改变链表结构，但是仍然不影响get操作。
 
+* size()必须统计所有Segment里元素的大小后求和，那岂不是要锁住全部的segment?
 
+  如果我们要统计整个ConcurrentHashMap里元素的大小，就必须统计所有Segment里元素的大小后求和。Segment里的全局变量count是一个volatile变量，那么在多线程场景下，我们是不是直接把所有Segment的count相加就可以得到整个ConcurrentHashMap大小了呢？不是的，虽然相加时可以获取每个Segment的count的最新值，但是拿到之后可能累加前使用的count发生了变化，那么统计结果就不准了。所以最安全的做法，是在统计size的时候把所有Segment的put，remove和clean方法全部锁住，但是这种做法显然非常低效。
 
-### 六、LinkedHashMap
+  　　因为在累加count操作过程中，之前累加过的count发生变化的几率非常小，所以ConcurrentHashMap的做法是先尝试2次通过不锁住Segment的方式来统计各个Segment大小，如果统计的过程中，容器的count发生了变化，则再采用加锁的方式来统计所有Segment的大小。
+
+  　　那么ConcurrentHashMap是如何判断在统计的时候容器是否发生了变化呢？使用modCount变量，在put , remove和clean方法里操作元素前都会将变量modCount进行加1，那么在统计size前后比较modCount是否发生变化，从而得知容器的大小是否发生变化。
+
+## 七、LinkedHashMap
 
 **参考资料**
 
 * [Java 8系列之重新认识HashMap](https://tech.meituan.com/2016/06/24/java-hashmap.html)
+
 * [Java7/8 中的 HashMap 和 ConcurrentHashMap 全解析](http://www.importnew.com/28263.html)
+
 * [Hashmap的结构，1.7和1.8有哪些区别](https://blog.csdn.net/qq_36520235/article/details/82417949)
+
+  
