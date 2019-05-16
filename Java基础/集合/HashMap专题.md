@@ -153,7 +153,7 @@ h&（length-1）保证获取的index一定在数组范围内，举个例子，�
 最终计算出的index=2。有些版本的对于此处的计算会使用取模运算，也能保证index一定在数组范围内，不过位运算对计算机来说，性能更高一些（HashMap中有大量位运算）。
 
 所以最终存储位置的确定流程是这样的：
-![image](https://raw.githubusercontent.com/herofishs/markdownPhoto/master/%E6%90%9C%E7%8B%97%E6%88%AA%E5%9B%BE20180829174702.png)
+![image](./imgs/hash过程.png)
 
 **step 4: 遍历table[i]和他的冲突链，如果找到key值相同的节点就覆盖这个节点下面的value，返回旧值，结束put流程。如果没有找到,进入step 5。**
 
@@ -362,7 +362,7 @@ HashMap在多线程的情况下，会引发安全问题。
 
 本来以为是正常设置，然后在jdk1.8不会被修复，没想到只是大佬嘴硬不承认时bug罢了。事实上，在jdk1.8版本，hashmap多线程put不会造成死循环。
 
-如何修复的呢？非常简单，应发死循环的原因是因为reSize原来链表部分的entry会倒置，JDK8是用 head 和 tail 来保证链表的顺序和之前一样，这样就不会产生循环引用。
+如何修复的呢？非常简单，引发死循环的原因是因为reSize原来链表部分的entry会倒置，JDK8使用 head 和 tail 来保证链表的顺序和之前一样，这样就不会产生循环引用。
 
 但是，jdk1.8虽然修复了死循环的bug,还是有数据丢失等问题，故依然建议在并发环境下，使用ConcurrentHashMap。
 
