@@ -429,6 +429,14 @@ HashMap在多线程的情况下，会引发安全问题。
 
   　　那么ConcurrentHashMap是如何判断在统计的时候容器是否发生了变化呢？使用modCount变量，在put , remove和clean方法里操作元素前都会将变量modCount进行加1，那么在统计size前后比较modCount是否发生变化，从而得知容器的大小是否发生变化。
 
+### JDK1.8
+
+#### 结构
+
+#### 构造方法
+
+
+
 ## 七、LinkedHashMap
 
 **参考资料**
